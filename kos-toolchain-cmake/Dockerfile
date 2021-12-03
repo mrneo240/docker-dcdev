@@ -62,6 +62,9 @@ LABEL maintainer "Hayden Kowalchuk <hayden@hkowsoftware.com>"
 # Set build arguments
 ARG VERBOSE
 
+# Switch back to root
+USER root
+
 # Install Cmake
 RUN printf "Installing Cmake...$NL" \
     # Install useful tools for building Dreamcast projects
@@ -76,6 +79,9 @@ RUN printf "Installing Cmake...$NL" \
 
 # Default to /src directory
 WORKDIR /src
+
+# Activate user
+USER dev
 
 # Run any command passed in a bash shell with the KOS environment loaded
 ENTRYPOINT ["/usr/local/bin/entry.sh"]

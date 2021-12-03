@@ -250,9 +250,8 @@ RUN \
     && apt update \
     && apt upgrade -y \
     && apt install -y --no-install-recommends --no-upgrade \
-    # possible live without: git
-        bash bzip2 genisoimage coreutils curl gawk \
-        patch sed subversion tar tree wget make meson  \
+        bash bzip2 genisoimage coreutils curl gawk git \
+        patch sed subversion tar tree wget make meson \
     && echo "dash dash/sh boolean false" | debconf-set-selections \
     && dpkg-reconfigure --frontend=noninteractive dash \
     && apt clean \
@@ -262,10 +261,20 @@ RUN \
     && printf "Create entry point script to automatically load KOS environment...$NL" \
     && printf '#!/bin/bash\n. /opt/toolchains/dc/kos/environ.sh\nexec "$@"' > /usr/local/bin/entry.sh \
     && chmod a+x /usr/local/bin/entry.sh \
+    && printf "Done.\n" \
+\
+    # Setup new non-root user
+    && printf "Creating non-root user: dev ...$NL" \
+    && useradd -ms /bin/bash dev \
+    && cp /root/.bashrc /home/dev/.bashrc \
+    && chmod 0755 /home/dev/.bashrc \
     && printf "Done.\n"
 
 # Default to /src directory
 WORKDIR /src
+
+# Activate user
+USER dev
 
 # Run any command passed in a bash shell with the KOS environment loaded
 ENTRYPOINT ["/usr/local/bin/entry.sh"]
