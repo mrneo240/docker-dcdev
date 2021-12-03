@@ -1,27 +1,35 @@
 # -------------------------------------------------
-# GCC Base Image (einsteinx2/dcdev-gcc-base)
+# GCC Base Image (mrneo240/dcdev-gcc-base)
 # -------------------------------------------------
 #
-# This image is meant to be a minimally sized image to be used as a base image to create the GCC cross-compiler 
-# toolchain image that will be used to build the final fully functional KOS toolchain images to prevent the need to 
+# This image is meant to be a minimally sized image to be used as a base image to create the GCC cross-compiler
+# toolchain image that will be used to build the final fully functional KOS toolchain images to prevent the need to
 # download all of the dependencies each time when rebuilding images locally (or CI if image caching is available).
 # When cached locally, this saves hundreds of megabytes of package downloads plus install time.
-# 
+#
 # Build Command:
-# -------------- 
-# `docker build -t einsteinx2/dcdev-gcc-base:latest .`
+# --------------
+# `docker build -t mrneo240/dcdev-gcc-base:latest .`
 
 
-FROM alpine:latest
-LABEL maintainer "Ben Baron <ben@einsteinx2.com>"
+FROM debian:stretch-slim
+LABEL maintainer "Hayden Kowalchuk <hayden@hkowsoftware.com>"
 
 # Download all necessary dependencies needed to build the KOS GCC cross-compiler toolchain
 RUN \
     # Install dependencies
     printf "Installing dependencies...\n" \
-    && apk --update add --no-cache bash build-base cmake coreutils curl git libjpeg-turbo-dev libpng-dev linux-headers musl-dev patch python2 subversion texinfo tree wget \
-	&& apk --update add --no-cache libelf-dev --repository=http://dl-cdn.alpinelinux.org/alpine/v3.9/main \
-	&& rm -rf /var/cache/apk/* \
+    && apt update \
+    && apt upgrade -y \
+    && apt install -y --no-install-recommends --no-upgrade \
+        binutils pkg-config gawk patch bzip2 tar xz-utils unzip libgmp-dev libmpfr-dev libmpc-dev gettext libelf-dev texinfo bison flex sed build-essential diffutils \
+        git curl wget python subversion openssl ca-certificates \
+        libjpeg-dev libpng-dev \
+        cmake make \
+    && echo "dash dash/sh boolean false" | debconf-set-selections \
+    && dpkg-reconfigure --frontend=noninteractive dash \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/* \
     && printf "Done.\n" \
 \
     # Prepare .bashrc

@@ -1,14 +1,14 @@
 # --------------------------------------------------------
-# KOS GCC Toolchain Image (einsteinx2/dcdev-gcc-toolchain)
+# KOS GCC Toolchain Image (mrneo240/dcdev-gcc-toolchain)
 # --------------------------------------------------------
 #
-# This image is meant to be a minimally sized image to be used as a base image to create the final fully functional 
+# This image is meant to be a minimally sized image to be used as a base image to create the final fully functional
 # KOS toolchain images as KOS changes much more often than the GCC cross-compiler toolchain and takes much less time to compile.
-# 
+#
 # Build Commands:
 # ---------------
-# GCC 9 Toolchain: `docker build -t einsteinx2/dcdev-gcc-toolchain:gcc-9 .`
-# GCC 4 Toolchain: `docker build --build-arg KOS_GCC_VER=4 -t einsteinx2/dcdev-gcc-toolchain:gcc-4 .`
+# GCC 9 Toolchain: `docker build -t mrneo240/dcdev-gcc-toolchain:gcc-9 .`
+# GCC 4 Toolchain: `docker build --build-arg KOS_GCC_VER=4 -t mrneo240/dcdev-gcc-toolchain:gcc-4 .`
 
 
 #
@@ -16,10 +16,10 @@
 #
 
 # Defaults to verbose output off as it should build faster without all of the console printing.
-# To debug build problems, add the flag `--build-arg VERBOSE=true` when building the image to 
+# To debug build problems, add the flag `--build-arg VERBOSE=true` when building the image to
 # have it print all output from each download and compilation step.
 # NOTE: If you are using the latest Docker versions with buildx, you'll also need to increase
-#       the log limit (https://github.com/docker/buildx/issues/484) and add optionally include 
+#       the log limit (https://github.com/docker/buildx/issues/484) and add optionally include
 #       the flag `--progress=plain` if you want to see the full output.
 ARG VERBOSE=false
 
@@ -36,11 +36,11 @@ ARG KOS_REPO="https://github.com/KallistiOS/KallistiOS.git"
 ARG KOS_BRANCH="master"
 
 #
-# First stage: Alpine-based builder image to compile the GCC toolchain
+# First stage: debian-based builder image to compile the GCC toolchain
 #
 
-FROM einsteinx2/dcdev-gcc-base:latest as builder
-LABEL maintainer "Ben Baron <ben@einsteinx2.com>"
+FROM mrneo240/dcdev-gcc-base:latest as builder
+LABEL maintainer "Hayden Kowalchuk <hayden@hkowsoftware.com>"
 
 # Choose GCC major version. Supported values are 9 (SH4 9.3/ARM 8.4), 4 (both 4.7.4)
 # Can be set using `--build-arg KOS_GCC_VER=4` when building, default is 9)
@@ -58,8 +58,9 @@ ENV DCTOOLCHAIN="/opt/toolchains/dc"
 ENV KOS="$DCTOOLCHAIN/kos"
 ENV DC_CHAIN="$KOS/utils/dc-chain"
 ENV DC_CHAIN_CONFIG_MK="$KOS/utils/dc-chain/config.mk"
+ENV DC_CHAIN_BUILD_MK="$KOS/utils/dc-chain/scripts/build.mk"
 
-# Use the bash shell instead of sh for the build process 
+# Use the bash shell instead of sh for the build process
 SHELL ["/bin/bash", "-c"]
 
 # Validate KOS_GCC_VER argument and set build variables
@@ -132,7 +133,7 @@ RUN \
     && git clone --single-branch --branch $KOS_BRANCH $KOS_REPO $KOS &> $REDIRECT \
     && printf "Done.\n"
 RUN \
-    # Patch the dc-chain config.mk file to set job threads and remove Obj-C support 
+    # Patch the dc-chain config.mk file to set job threads and remove Obj-C support
     . /tmp/dockerenv.sh \
     && printf "Copying sample dc-chain config.mk file...$NL" \
     && cp $DC_CHAIN/config.mk.stable.sample $DC_CHAIN_CONFIG_MK \
@@ -140,7 +141,7 @@ RUN \
     && sed -i "/^makejobs/c\makejobs=-j$DOCKER_THREADS" $DC_CHAIN_CONFIG_MK \
     && sed -i "/^pass2_languages/c\pass2_languages=c,c++" $DC_CHAIN_CONFIG_MK \
     && sed -i "/^erase/c\erase=0" $DC_CHAIN_CONFIG_MK \
-    && printf "Done.\n"
+    && printf "Done.\n" \
 RUN \
     # Patch dc-chain config.mk file to set GCC versions
     . /tmp/dockerenv.sh \
@@ -167,6 +168,12 @@ RUN \
     && printf "Patching SH4 toolchain extensions$NL" \
     && sed -i "/^arm_binutils_tarball_type/c\arm_binutils_tarball_type=$DOCKER_ARM_BINUTILS_EXT" $DC_CHAIN_CONFIG_MK \
     && sed -i "/^arm_gcc_tarball_type/c\arm_gcc_tarball_type=$DOCKER_ARM_GCC_EXT" $DC_CHAIN_CONFIG_MK \
+    && printf "Done.\n" \
+    \
+    && printf "Patching dc-chain build.mk file disable features...$NL" \
+    \
+    && printf "Patching SH4 toolchain versions$NL" \
+    && sed -i "/^\$(build_sh4_targets): extra_configure_args/c\$(build_sh4_targets): extra_configure_args = --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only --disable-long-long --disable-libstdcxx-dual-abi --disable-libada --disable-nls --disable-shared --disable-docs --disable-libssp --disable-libquadmath" $DC_CHAIN_CONFIG_MK \
     && printf "Done.\n"
 RUN \
     # Download and unpack compiler toolchain
@@ -231,11 +238,11 @@ RUN \
     && printf "Done.\n"
 
 #
-# Second stage: Alpine image with only the Dreamcast cross-compiler toolchain (no KOS) and minimal files to reduce image size
+# Second stage: debian image with only the Dreamcast cross-compiler toolchain (no KOS) and minimal files to reduce image size
 #
 
-FROM alpine:latest
-LABEL maintainer "Ben Baron <ben@einsteinx2.com>"
+FROM debian:stretch-slim
+LABEL maintainer "Hayden Kowalchuk <hayden@hkowsoftware.com>"
 
 # Set build arguments
 ARG VERBOSE
@@ -250,8 +257,8 @@ COPY --from=builder /tmp/copy $DCTOOLCHAIN
 RUN . $DCTOOLCHAIN/dockerenv.sh \
     && rm -f $DCTOOLCHAIN/dockerenv.sh \
     && printf "Installing bash and tree...$NL" \
-    && apk --update add --no-cache bash tree &> $REDIRECT \
-	&& rm -rf /var/cache/apk/* \
+    && echo "dash dash/sh boolean false" | debconf-set-selections \
+    && dpkg-reconfigure --frontend=noninteractive dash \
     && printf ". /etc/profile\n" > /root/.bashrc \
     && printf "Done.\n"
 

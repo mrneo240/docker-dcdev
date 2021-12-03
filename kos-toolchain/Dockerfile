@@ -1,5 +1,5 @@
 # -------------------------------------------------------------
-# KOS Complete Toolchain Image (einsteinx2/dcdev-kos-toolchain)
+# KOS Complete Toolchain Image (mrneo240/dcdev-kos-toolchain)
 # -------------------------------------------------------------
 #
 # This image is meant to be used as a fully featured KOS development environment. It includes both the SH4 and
@@ -7,35 +7,35 @@
 # useful utilities and programs that you might need to compile any Dreamcast project. It's based on Alpine to keep
 # the size to a minimum, though convenience is preferred over a slightly larger image, hence the preinstalled tools
 # and the inclusion of the KOS and KOS-PORTS source code rather than the compiled binaries and headers only.
-# 
+#
 # This image contains an entry scipt that automatically loads the KOS environment variables, so it can compile a
 # project or use any of the included tools without entering the interactive shell. If no command is provided, an
 # interactive bash shell is automatically launched.
 #
 # Build Commands:
 # ---------------
-# GCC 9 Toolchain: `docker build -t einsteinx2/dcdev-kos-toolchain:gcc-9 .`
-# GCC 4 Toolchain: `docker build --build-arg KOS_GCC_VER=4 -t einsteinx2/dcdev-kos-toolchain:gcc-4 .`
+# GCC 9 Toolchain: `docker build -t mrneo240/dcdev-kos-toolchain:gcc-9 .`
+# GCC 4 Toolchain: `docker build --build-arg KOS_GCC_VER=4 -t mrneo240/dcdev-kos-toolchain:gcc-4 .`
 #
 # Example GCC 9 Usage (run from your project directory):
 # --------------
-# Simple Makefile:   `docker run -it --rm -v $PWD:/src einsteinx2/dcdev-kos-toolchain:gcc-9 make`
-# Build Script:      `docker run -it --rm -v $PWD:/src einsteinx2/dcdev-kos-toolchain:gcc-9 ./dc_build.sh`
-# Interactive Shell: `docker run -it --rm -v $PWD:/src einsteinx2/dcdev-kos-toolchain:gcc-9`
+# Simple Makefile:   `docker run -it --rm -v $PWD:/src mrneo240/dcdev-kos-toolchain:gcc-9 make`
+# Build Script:      `docker run -it --rm -v $PWD:/src mrneo240/dcdev-kos-toolchain:gcc-9 ./dc_build.sh`
+# Interactive Shell: `docker run -it --rm -v $PWD:/src mrneo240/dcdev-kos-toolchain:gcc-9`
 #
 # Example GCC 4 Usage (run from your project directory):
 # --------------
-# Simple Makefile:   `docker run -it --rm -v $PWD:/src einsteinx2/dcdev-kos-toolchain:gcc-4 make`
-# Build Script:      `docker run -it --rm -v $PWD:/src einsteinx2/dcdev-kos-toolchain:gcc-4 ./dc_build.sh`
-# Interactive Shell: `docker run -it --rm -v $PWD:/src einsteinx2/dcdev-kos-toolchain:gcc-4`
+# Simple Makefile:   `docker run -it --rm -v $PWD:/src mrneo240/dcdev-kos-toolchain:gcc-4 make`
+# Build Script:      `docker run -it --rm -v $PWD:/src mrneo240/dcdev-kos-toolchain:gcc-4 ./dc_build.sh`
+# Interactive Shell: `docker run -it --rm -v $PWD:/src mrneo240/dcdev-kos-toolchain:gcc-4`
 #
 # Notes
 # -----
 # More specific tags are provided so you can pin your builds to an exact version of this image if needed. For
-# example, you can specify GCC 9.3 by using the einsteinx2/dcdev-kos-toolchain:gcc-9.3 image, or you can specify 
-# a certain GCC 9.3 image by using a version tag like the einsteinx2/dcdev-kos-toolchain:gcc-9.3__v1.0.0 image.
+# example, you can specify GCC 9.3 by using the mrneo240/dcdev-kos-toolchain:gcc-9.3 image, or you can specify
+# a certain GCC 9.3 image by using a version tag like the mrneo240/dcdev-kos-toolchain:gcc-9.3__v1.0.0 image.
 # This is mostly because while the GCC toolchains don't change very often and are usually compatible as long as
-# you're using the same GCC major version (e.g. 9.2 and 9.3), however the KOS library changes more frequently 
+# you're using the same GCC major version (e.g. 9.2 and 9.3), however the KOS library changes more frequently
 # and may prevent your project from compiling on a newer version without making some (usually minor) changes.
 
 
@@ -44,10 +44,10 @@
 #
 
 # Defaults to verbose output off as it should build faster without all of the console printing.
-# To debug build problems, add the flag `--build-arg VERBOSE=true` when building the image to 
+# To debug build problems, add the flag `--build-arg VERBOSE=true` when building the image to
 # have it print all output from each download and compilation step.
 # NOTE: If you are using the latest Docker versions with buildx, you'll also need to increase
-#       the log limit (https://github.com/docker/buildx/issues/484) and add optionally include 
+#       the log limit (https://github.com/docker/buildx/issues/484) and add optionally include
 #       the flag `--progress=plain` if you want to see the full output.
 ARG VERBOSE=false
 
@@ -76,12 +76,12 @@ ARG PORTS_BRANCH="master"
 ARG KOS_GCC_VER=9
 
 #
-# First stage: Pre-built GCC cross-compiler toolchain to build KOS 
+# First stage: Pre-built GCC cross-compiler toolchain to build KOS
 #
 
-FROM einsteinx2/dcdev-gcc-toolchain:gcc-$KOS_GCC_VER as toolchain
-FROM einsteinx2/dcdev-gcc-base:latest as builder
-LABEL maintainer "Ben Baron <ben@einsteinx2.com>"
+FROM mrneo240/dcdev-gcc-toolchain:gcc-$KOS_GCC_VER as toolchain
+FROM mrneo240/dcdev-gcc-base:latest as builder
+LABEL maintainer "Hayden Kowalchuk <hayden@hkowsoftware.com>"
 
 # Set build arguments
 ARG VERBOSE
@@ -148,6 +148,11 @@ RUN \
 RUN \
     # Build KOS Ports
     . /tmp/dockerenv.sh && . $KOS/environ.sh \
+    && printf "Patching KOS Ports (libpng)...$NL" \
+    && sed -i "/^SHA256 (libpng-1.6.37.tar/c\SHA256 (libpng-1.6.37.tar.xz) = 505e70834d35383537b6491e7ae8641f1a4bed1876dbfe361201fc80868d88ca" $PORTS/libpng/distinfo \
+    && sed -i "/^SIZE (libpng-1.6.37.tar/c\SIZE (libpng-1.6.37.tar.xz) = 1012272" $PORTS/libpng/distinfo \
+    && sed -i "/^DOWNLOAD_SITES =/c\DOWNLOAD_SITES =	https://ftp.osuosl.org/pub/blfs/conglomeration/libpng/ \\\\" $PORTS/libpng/Makefile \
+    && sed -i "/^DOWNLOAD_FILES =/c\DOWNLOAD_FILES = 	\${PORTNAME}-\${PORTVERSION}.tar.xz" $PORTS/libpng/Makefile \
     && printf "Building KOS Ports...$NL" \
     && make -C $KOS kos-ports_all &> $REDIRECT \
     && printf "Done.\nCleaning KOS Ports...$NL" \
@@ -197,13 +202,13 @@ RUN \
     && rm makeip.tar.gz &> $REDIRECT \
     && gcc makeip.c -o makeip &> $REDIRECT \
     && ln -s $KOS/utils/makeip/makeip $DCTOOLCHAIN/bin/makeip \
-    && cd $KOS/utils \ 
+    && cd $KOS/utils \
     && git clone https://github.com/einsteinx2/img4dc.git &> $REDIRECT \
     && cd $KOS/utils/img4dc \
     && cmake . &> $REDIRECT \
     && make cdi4dc &> $REDIRECT \
     && ln -s $KOS/utils/img4dc/cdi4dc/cdi4dc $DCTOOLCHAIN/bin/cdi4dc \
-    && cd $KOS/utils \ 
+    && cd $KOS/utils \
     && git clone https://github.com/sizious/dcload-ip.git &> $REDIRECT \
     && cd $KOS/utils/dcload-ip \
     && make install \
@@ -218,11 +223,11 @@ RUN \
     && printf "Done.\n"
 
 #
-# Second stage: Final Alpine image with the GCC cross-compiler toolchain, KOS, KOS-PORTS, Addons, Utils, and some other useful stuff
+# Second stage: Final debian image with the GCC cross-compiler toolchain, KOS, KOS-PORTS, Addons, Utils, and some other useful stuff
 #
 
-FROM alpine:latest
-LABEL maintainer "Ben Baron <ben@einsteinx2.com>"
+FROM debian:stretch-slim
+LABEL maintainer "Hayden Kowalchuk <hayden@hkowsoftware.com>"
 
 # Set build arguments
 ARG VERBOSE
@@ -242,11 +247,15 @@ RUN \
 \
     # Install useful tools for building Dreamcast projects
     && printf "Installing useful tools for building Dreamcast projects...$NL" \
-    && apk --update add --no-cache \
-       bash bison bzip2 cdrkit cmake colordiff coreutils curl flex gawk git linux-headers \
-       musl-dev make patch python2 sed subversion tar texinfo tree vim wget &> $REDIRECT \
-	&& apk --update add --no-cache libelf-dev --repository=http://dl-cdn.alpinelinux.org/alpine/v3.9/main \
-    && rm -rf /var/cache/apk/* \
+    && apt update \
+    && apt upgrade -y \
+    && apt install -y --no-install-recommends --no-upgrade \
+    # possible live without: git
+        bash bzip2 genisoimage coreutils curl gawk \
+        patch sed subversion tar tree wget make meson  \
+    && echo "dash dash/sh boolean false" | debconf-set-selections \
+    && dpkg-reconfigure --frontend=noninteractive dash \
+    && apt clean \
     && printf "Done.\n" \
 \
     # Create entry point script to automatically load KOS environment
